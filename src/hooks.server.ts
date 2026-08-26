@@ -2,6 +2,7 @@ import { runBackupJob } from '$lib/server/backups/run-backup-job';
 import { checkAllActiveDatabases } from '$lib/server/databases/checks';
 import { db } from '$lib/server/db';
 import { executeDatabaseMaintenance } from '$lib/server/db/maintenance';
+import { getSessionUser, SESSION_COOKIE } from '$lib/server/auth';
 import { setUnfinishedBackupsToError } from '$lib/server/queries/backups';
 import { getJobsToRun } from '$lib/server/queries/jobs';
 import { setUnfinishedRestoresToError } from '$lib/server/queries/restores';
@@ -11,9 +12,23 @@ import { addOrUpdateCronJob, cronNextExecutions, validCronOrDefault } from '$lib
 import { computeToolChecksSuccess } from '$lib/server/shared/tool-checks';
 import { checkAllActiveRepositories } from '$lib/server/storages/checks';
 import { updateAllStoragesHealth } from '$lib/server/storages/health';
-import type { ServerInit } from '@sveltejs/kit';
+import { redirect, type Handle, type ServerInit } from '@sveltejs/kit';
 import dayjs from 'dayjs';
 import { migrate } from 'drizzle-orm/bun-sql/migrator';
+
+const PUBLIC_PATHS = [ '/login', '/setup', '/api/healthcheck' ];
+
+export const handle: Handle = async ({ event, resolve }) => {
+    const sessionId = event.cookies.get(SESSION_COOKIE);
+    event.locals.user = await getSessionUser(sessionId);
+
+    const isPublic = PUBLIC_PATHS.some(path => event.url.pathname === path || event.url.pathname.startsWith(`${path}/`));
+    if (!event.locals.user && !isPublic) {
+        throw redirect(303, '/login');
+    }
+
+    return resolve(event);
+};
 
 export const init: ServerInit = async () => {
     logger.info('Applying database migrations...');
@@ -21,15 +36,12 @@ export const init: ServerInit = async () => {
     // @ts-expect-error
     await migrate(db, { migrationsFolder: './drizzle' });
 
-    // Enable foreign key constraints
     db.$client.run('PRAGMA foreign_keys = ON;');
 
-    logger.info('Migrations applied successfully, starting up Backry...');
+    logger.info('Migrations applied successfully, starting up AGF Backup...');
 
-    // Load settings
     await refreshSettingsCache();
 
-    // Schedule cron jobs
     addOrUpdateCronJob('system:check-storages',
         validCronOrDefault(process.env.BACKRY_STORAGE_CHECK_CRON, '*/10 * * * *', 'storage check'),
         () => checkAllActiveRepositories(),
@@ -69,7 +81,6 @@ export const init: ServerInit = async () => {
 
     await computeToolChecksSuccess();
 
-    //  If next check run is >30s away, run it now in the background
     void (async () => {
         if (dayjs(cronNextExecutions('system:check-storages')[0]).diff(dayjs(), 'second') > 30) {
             await checkAllActiveRepositories();
@@ -84,5 +95,5 @@ export const init: ServerInit = async () => {
         }
     })();
 
-    logger.info('Backry started successfully');
+    logger.info('AGF Backup started successfully');
 };
