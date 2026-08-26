@@ -4,7 +4,9 @@ import { areToolChecksSuccessful } from '$lib/server/shared/tool-checks';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async () => {
+export const load: LayoutServerLoad = async ({ locals }) => {
+    if (!locals.user) throw redirect(303, '/login');
+
     const [ errors, warnings, settings ] = await Promise.all([
         getErrorCountPerType(),
         getWarningCountPerType(),
@@ -16,6 +18,7 @@ export const load: LayoutServerLoad = async () => {
     }
 
     return {
+        user: locals.user,
         errors: {
             databases: errors.databases,
             storages: errors.storages,
