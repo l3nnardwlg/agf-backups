@@ -36,6 +36,13 @@
       "when": 1764091922306,
       "tag": "0004_add_settings_table",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787760900000,
+      "tag": "0005_add_auth",
+      "breakpoints": true
     }
   ]
 }
