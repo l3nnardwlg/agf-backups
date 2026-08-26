@@ -18,6 +18,7 @@
 
     let { database, hideEngine = false, hideContainer = false }: Props = $props();
     let loading = $state(false);
+    let backupRunning = $state(false);
 
     let jobListFormatted = $derived(database.jobsDatabases.map(db => ({
         id: db.job.id,
@@ -37,10 +38,42 @@
 
         loading = false;
     }
+
+    async function backupNow() {
+        backupRunning = true;
+
+        try {
+            const response = await fetch(`/api/databases/${database.id}/backup-now`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) {
+                const message = await response.text();
+                addToast(message || `Failed to back up ${database.name}`, 'error');
+                return;
+            }
+
+            addToast(`Backup of ${database.name} completed`, 'success');
+            await invalidateAll();
+        } catch (e) {
+            addToast(`Failed to back up ${database.name}: ${e instanceof Error ? e.message : String(e)}`, 'error');
+        } finally {
+            backupRunning = false;
+        }
+    }
 </script>
 
 
 {#snippet secondaryButtons()}
+    <button class="btn btn-primary btn-sm btn-soft"
+            disabled={backupRunning || database.jobsDatabases.length === 0}
+            onclick={backupNow}
+            title={database.jobsDatabases.length === 0 ? 'Add this database to a backup job first' : 'Create a backup now'}
+            type="button">
+        <FileCheck class="w-4 h-4"/>
+        {backupRunning ? 'Backing up…' : 'Backup now'}
+    </button>
+
     <a class="btn btn-success btn-sm btn-soft" href="/backups?database={database.id}">
         <FileCheck class="w-4 h-4"/>
         View backups
@@ -49,7 +82,7 @@
 
 
 <BaseListElement deleteConfirmationMessage={`The database "${database.name}" will be deleted from Backry.`}
-                 disabled={loading}
+                 disabled={loading || backupRunning}
                  editHref={`/databases/${database.id}`}
                  error={database.error}
                  ondelete={deleteDatabase}
