@@ -89,7 +89,13 @@ export const mysqlMethods = {
     },
 
     getDumpCommand(connectionString, additionalArgs = []) {
-        return [ this.dumpCommand, ...additionalArgs, ...connectionStringToOptions(connectionString, false) ];
+        // MariaDB's client can emit a non-fatal SSL warning to stderr when connecting
+        // to a server without TLS. Restic's JSON stream treats that warning as an error.
+        // Keep explicit user-provided SSL options authoritative; otherwise disable SSL
+        // for the dump command to match Backry's common Docker/private-network use case.
+        const hasExplicitSslOption = /[?&]ssl(?:=|&|$)/i.test(connectionString);
+        const sslArgs = hasExplicitSslOption ? [] : [ '--ssl=0' ];
+        return [ this.dumpCommand, ...sslArgs, ...additionalArgs, ...connectionStringToOptions(connectionString, false) ];
     },
 
     getDumpEnv(database: typeof databases.$inferSelect): Record<string, string> {
