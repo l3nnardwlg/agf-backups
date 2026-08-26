@@ -7,6 +7,36 @@ export const DATABASE_ENGINES = [ 'postgresql', 'sqlite', 'mysql', 'mongodb' ] a
 export const BACKUP_STATUS = [ 'running', 'success', 'error', 'pruned' ] as const;
 export const RUN_ORIGIN = [ 'manual', 'scheduled' ] as const;
 export const NOTIFICATION_TRIGGER = [ 'run_finished', 'run_error' ] as const;
+export const USER_ROLES = [ 'admin', 'user' ] as const;
+
+export const users = sqliteTable('users', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    username: text('username').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role', { enum: USER_ROLES }).notNull().default('user'),
+    active: integer('active', { mode: 'boolean' }).notNull().default(true),
+    createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text('updated_at').default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const sessions = sqliteTable('sessions', {
+    id: text('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    breakGlass: integer('break_glass', { mode: 'boolean' }).notNull().default(false),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const usersRelations = relations(users, ({ many }) => ({
+    sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+    user: one(users, {
+        fields: [ sessions.userId ],
+        references: [ users.id ],
+    }),
+}));
 
 export const databases = sqliteTable('databases', {
     id: integer('id').primaryKey({ autoIncrement: true }),

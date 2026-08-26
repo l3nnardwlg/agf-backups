@@ -1,38 +1,32 @@
 <script lang="ts">
-    import Head from '$lib/components/common/Head.svelte';
-    import { OctagonAlert } from '$lib/components/icons';
     import OnboardingCard from '$lib/components/onboarding/OnboardingCard.svelte';
-    import { SetupApiStore } from '$lib/helpers/setup.svelte';
-
-    const apiSetup = new SetupApiStore('docker');
-
-    function handleValidateAndNext() {
-        apiSetup.updateSettingsAndGoToNextStep();
-    }
+    import type { PageProps } from './$types';
+    let { form }: PageProps = $props();
 </script>
 
+<OnboardingCard title="Create AGF Backup admin">
+    <p class="text-sm text-base-content/60">Create the first local administrator account.</p>
 
-<Head title="Authentication setup"/>
-
-<OnboardingCard step={1} title="Authentication">
-    <div class="alert alert-soft alert-warning mb-2">
-        <OctagonAlert class="inline w-6 h-6"/>
-        <div>
-            Authentication is not yet implemented. Please make sure your Backry instance is secured and not publicly
-            accessible.
-        </div>
-    </div>
-
-    {#if apiSetup.error}
-        <div class="alert alert-soft alert-error mb-2">
-            <OctagonAlert class="inline w-6 h-6"/>
-            <p>{apiSetup.error}</p>
-        </div>
+    {#if form?.error}
+        <div class="alert alert-error mt-4 text-sm">{form.error}</div>
     {/if}
 
-    <div class="card-actions justify-end">
-        <button class="btn btn-primary" disabled={apiSetup.loading} onclick={handleValidateAndNext}>
-            Next
-        </button>
-    </div>
+    <form method="POST" class="mt-6 flex flex-col gap-4">
+        <label class="form-control gap-2">
+            <span class="label-text">Username</span>
+            <input class="input input-bordered" name="username" required minlength="3" value={form?.username ?? ''} />
+        </label>
+
+        <label class="form-control gap-2">
+            <span class="label-text">Password</span>
+            <input class="input input-bordered" type="password" name="password" required minlength="12" autocomplete="new-password" />
+        </label>
+
+        <label class="form-control gap-2">
+            <span class="label-text">Confirm password</span>
+            <input class="input input-bordered" type="password" name="passwordConfirm" required minlength="12" autocomplete="new-password" />
+        </label>
+
+        <button class="btn btn-primary" type="submit">Create admin</button>
+    </form>
 </OnboardingCard>
