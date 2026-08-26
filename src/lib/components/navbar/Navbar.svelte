@@ -32,8 +32,8 @@
 
 <aside class="fixed top-0 flex h-screen w-28 flex-col gap-8 overflow-y-auto p-2 shadow-md bg-base-100 rounded-r-box">
     <a class="flex flex-col items-center gap-2" href="/">
-        <img alt="Backry Logo" class="h-10 w-10" height="128" src="/favicon.png" width="128"/>
-        <span class="text-xl font-bold">Backry</span>
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-black text-primary-content">AGF</div>
+        <span class="text-center text-base font-bold leading-tight">AGF Backup</span>
     </a>
 
     <nav class="flex flex-1 flex-col gap-4">
@@ -56,6 +56,9 @@
                            href="/settings"
                            icon={Settings}
                            label="Settings"/>
+            <form action="/logout" method="POST" class="px-1">
+                <button class="btn btn-ghost btn-xs w-full" type="submit">Sign out</button>
+            </form>
         </div>
     </nav>
 </aside>
